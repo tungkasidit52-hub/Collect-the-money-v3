@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PiggySave - แอปแจ้งเตือนเก็บเงิน</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Fonts: Plus Jakarta Sans & Kanit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Canvas Confetti for Celebration -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              900: '#064e3b',
+            },
+            accent: {
+              500: '#6366f1',
+              600: '#4f46e5',
+            }
+          },
+          fontFamily: {
+            kanit: ['Kanit', 'sans-serif'],
+            jakarta: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          boxShadow: {
+            'glow-emerald': '0 10px 30px -10px rgba(16, 185, 129, 0.35)',
+            'glow-indigo': '0 10px 30px -10px rgba(99, 102, 241, 0.35)',
+            'card-soft': '0 8px 30px rgba(0, 0, 0, 0.04)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Kanit', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    .font-num {
+      font-family: 'Plus Jakarta Sans', 'Kanit', sans-serif;
+    }
+
+    /* Glassmorphism utility */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+    }
+
+    .dark .glass-card {
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Elastic Button Press Effects */
+    .btn-spring {
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s;
+    }
+    .btn-spring:active {
+      transform: scale(0.93);
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(16, 185, 129, 0.3);
+      border-radius: 99px;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-full flex justify-center selection:bg-brand-500 selection:text-white transition-colors duration-300">
+
+  <!-- Mobile App Wrapper Frame -->
+  <div class="w-full max-w-md min-h-screen bg-slate-50 dark:bg-slate-900 shadow-2xl flex flex-col relative pb-28 border-x border-slate-200/50 dark:border-slate-800/80">
+
+    <!-- Top Status Bar Mock & App Header -->
+    <header class="sticky top-0 z-30 pt-4 px-5 pb-3 glass-card border-b border-slate-200/40 dark:border-slate-800/40">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-600 to-teal-400 flex items-center justify-center text-white shadow-glow-emerald">
+            <i class="fa-solid fa-piggy-bank text-xl"></i>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-widest text-brand-600 dark:text-brand-400">Fintech Mobile</span>
+            <h1 class="text-lg font-bold leading-none text-slate-900 dark:text-white">PiggySave</h1>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Dark Mode Toggle -->
+          <button onclick="toggleDarkMode()" class="w-9 h-9 rounded-xl bg-slate-200/60 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 btn-spring">
+            <i class="fa-solid fa-moon dark:hidden text-sm"></i>
+            <i class="fa-solid fa-sun hidden dark:block text-amber-400 text-sm"></i>
+          </button>
+
+          <!-- Notification Modal Button -->
+          <button onclick="openNotifModal()" class="w-9 h-9 rounded-xl bg-slate-200/60 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 btn-spring relative">
+            <i class="fa-regular fa-bell text-sm"></i>
+            <span id="notifActiveBadge" class="w-2 h-2 rounded-full bg-brand-500 absolute top-2 right-2 hidden"></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Scrollable App Container -->
+    <main class="flex-1 px-5 pt-5 space-y-6 overflow-y-auto">
+
+      <!-- HERO WIDGET: Total Saved & Streak Balance Card -->
+      <section class="relative rounded-3xl p-6 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 dark:from-slate-800 dark:to-slate-950 text-white shadow-xl overflow-hidden border border-slate-800">
+        <!-- Background Decorative Glows -->
+        <div class="absolute -top-12 -right-12 w-40 h-40 bg-brand-500/20 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-10 -left-10 w-36 h-36 bg-accent-500/20 rounded-full blur-2xl"></div>
+
+        <div class="relative z-10 flex justify-between items-start">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">เงินสะสมรวมทั้งหมด</p>
+            <div class="text-3xl font-extrabold font-num mt-1 text-white tracking-tight" id="heroTotalBalance">฿0</div>
+          </div>
+          <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold shadow-sm">
+            <i class="fa-solid fa-fire text-amber-400 animate-pulse"></i>
+            <span id="streakDaysCount">0 วัน</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-brand-400"></span>
+            <span id="completedBadgeText">เป้าหมายสำเร็จ 0/0</span>
+          </div>
+          <button onclick="switchTab('history')" class="text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1 transition">
+            ดูประวัติ <i class="fa-solid fa-chevron-right text-[10px]"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- TAB NAVIGATION CONTROLS -->
+      <div class="flex bg-slate-200/70 dark:bg-slate-800/70 p-1 rounded-2xl text-xs font-semibold">
+        <button id="tabBtnGoals" onclick="switchTab('goals')" class="flex-1 py-2.5 rounded-xl transition-all shadow-sm bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 flex items-center justify-center gap-2">
+          <i class="fa-solid fa-bullseye"></i>
+          <span>เป้าหมาย (Goals)</span>
+        </button>
+        <button id="tabBtnHistory" onclick="switchTab('history')" class="flex-1 py-2.5 rounded-xl transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center justify-center gap-2">
+          <i class="fa-solid fa-receipt"></i>
+          <span>ประวัติออมเงิน</span>
+        </button>
+      </div>
+
+      <!-- GOALS TAB CONTENT -->
+      <div id="tabGoalsContent" class="space-y-4">
+        <div class="flex justify-between items-center">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span>รายการออมเงิน</span>
+            <span id="goalsBadgeCount" class="text-xs px-2 py-0.5 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 font-num font-bold">0</span>
+          </h2>
+          <button onclick="openGoalModal()" class="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
+            <i class="fa-solid fa-plus"></i> เพิ่มเป้าหมาย
+          </button>
+        </div>
+
+        <!-- Goals Cards Container -->
+        <div id="goalsCardsList" class="space-y-4">
+          <!-- Goal cards injected dynamically -->
+        </div>
+      </div>
+
+      <!-- HISTORY TAB CONTENT -->
+      <div id="tabHistoryContent" class="hidden space-y-3">
+        <div class="flex justify-between items-center">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white">ประวัติการฝากเงิน</h2>
+          <button onclick="clearHistoryLog()" class="text-xs text-rose-500 hover:underline">ล้างประวัติ</button>
+        </div>
+
+        <div id="historyLogList" class="space-y-2">
+          <!-- History items injected dynamically -->
+        </div>
+      </div>
+
+    </main>
+
+    <!-- FLOATING ACTION BUTTON (FAB) -->
+    <div class="fixed bottom-6 left-0 right-0 max-w-md mx-auto px-6 z-20 pointer-events-none">
+      <button onclick="openGoalModal()" class="pointer-events-auto w-full py-4 bg-gradient-to-r from-brand-500 via-teal-500 to-emerald-600 hover:from-brand-600 hover:to-teal-600 text-white font-bold rounded-2xl shadow-glow-emerald flex items-center justify-center gap-2 btn-spring text-base">
+        <i class="fa-solid fa-plus text-lg"></i>
+        <span>สร้างเป้าหมายเก็บเงินใหม่</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- MODAL 1: ADD / EDIT GOAL -->
+  <div id="goalModal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-end sm:items-center justify-center hidden opacity-0 transition-opacity duration-300">
+    <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 transform translate-y-full sm:translate-y-0 transition-transform duration-300">
+      <div class="flex justify-between items-center mb-5">
+        <h3 id="goalModalTitle" class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <span class="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-400 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-bullseye"></i>
+          </span>
+          <span>สร้างเป้าหมายใหม่</span>
+        </h3>
+        <button onclick="closeGoalModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-white flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="goalForm" onsubmit="saveGoalHandler(event)" class="space-y-4">
+        <input type="hidden" id="formGoalId">
+
+        <!-- Category Emoji Picker -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">ไอคอนหมวดหมู่</label>
+          <div class="flex gap-2 overflow-x-auto pb-1" id="emojiSelector">
+            <!-- Dynamic Emojis -->
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">ชื่อเป้าหมาย <span class="text-rose-500">*</span></label>
+          <input type="text" id="formTitle" required placeholder="เช่น ซื้อหูฟังไร้สาย, ทริปญี่ปุ่น, เงินสำรอง" class="w-full px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border-0 focus:ring-2 focus:ring-brand-500 text-sm dark:text-white outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">เป้าหมาย (บาท) <span class="text-rose-500">*</span></label>
+            <input type="number" id="formTarget" required min="1" step="any" placeholder="1000" class="w-full px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border-0 focus:ring-2 focus:ring-brand-500 text-sm font-num dark:text-white outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">เวลาเตือนประจำวัน <span class="text-rose-500">*</span></label>
+            <input type="time" id="formTime" required class="w-full px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border-0 focus:ring-2 focus:ring-brand-500 text-sm font-num dark:text-white outline-none">
+          </div>
+        </div>
+
+        <div class="pt-3 flex gap-3">
+          <button type="button" onclick="closeGoalModal()" class="flex-1 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-bold btn-spring">ยกเลิก</button>
+          <button type="submit" class="flex-1 py-3 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-bold shadow-glow-emerald btn-spring">บันทึกเป้าหมาย</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: QUICK DEPOSIT SHEET -->
+  <div id="depositModal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-end justify-center hidden opacity-0 transition-opacity duration-300">
+    <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl p-6 shadow-2xl border-t border-slate-200 dark:border-slate-800">
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <span class="text-[10px] font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest">Quick Deposit</span>
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white" id="depositModalGoalTitle">ออมเงินเพิ่ม</h3>
+        </div>
+        <button onclick="closeDepositModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="depositForm" onsubmit="submitDepositHandler(event)" class="space-y-4">
+        <input type="hidden" id="depositGoalId">
+
+        <!-- Preset Amount Pills -->
+        <div class="grid grid-cols-4 gap-2">
+          <button type="button" onclick="setPresetDeposit(50)" class="py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-brand-100 dark:hover:bg-brand-900/40 hover:text-brand-600 font-num font-bold text-xs text-slate-700 dark:text-slate-300 transition">+50</button>
+          <button type="button" onclick="setPresetDeposit(100)" class="py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-brand-100 dark:hover:bg-brand-900/40 hover:text-brand-600 font-num font-bold text-xs text-slate-700 dark:text-slate-300 transition">+100</button>
+          <button type="button" onclick="setPresetDeposit(500)" class="py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-brand-100 dark:hover:bg-brand-900/40 hover:text-brand-600 font-num font-bold text-xs text-slate-700 dark:text-slate-300 transition">+500</button>
+          <button type="button" onclick="setPresetDeposit(1000)" class="py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-brand-100 dark:hover:bg-brand-900/40 hover:text-brand-600 font-num font-bold text-xs text-slate-700 dark:text-slate-300 transition">+1000</button>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">ระบุจำนวนเงิน (บาท)</label>
+          <div class="relative">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 font-num font-bold text-slate-400">฿</span>
+            <input type="number" id="depositAmountInput" required min="1" step="any" placeholder="0" class="w-full pl-8 pr-4 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 border-0 focus:ring-2 focus:ring-brand-500 font-num text-lg font-bold dark:text-white outline-none">
+          </div>
+        </div>
+
+        <button type="submit" class="w-full py-3.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-2xl shadow-glow-emerald btn-spring text-sm">
+          ยืนยันการฝากเงิน 🐷
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: ALARM & REMINDER TRIGGER -->
+  <div id="alarmModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-6 hidden opacity-0 transition-opacity duration-300">
+    <div class="w-full max-w-xs bg-white dark:bg-slate-900 rounded-3xl p-6 text-center shadow-2xl border border-amber-500/30 transform scale-90 transition-transform duration-300 relative overflow-hidden">
+      <div class="w-16 h-16 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center text-3xl mx-auto mb-3 animate-bounce">
+        <i class="fa-solid fa-bell"></i>
+      </div>
+      <h3 class="text-lg font-bold text-slate-900 dark:text-white">ถึงเวลาเก็บเงินแล้ว! ⏰</h3>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4" id="alarmModalSub">เป้าหมายประจำวันของคุณ</p>
+
+      <div class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3 mb-5">
+        <div class="text-xl mb-1" id="alarmGoalEmoji">🎯</div>
+        <div class="font-bold text-sm text-slate-800 dark:text-slate-100" id="alarmGoalTitle">ชื่อเป้าหมาย</div>
+      </div>
+
+      <div class="space-y-2">
+        <button id="alarmDepositNowBtn" class="w-full py-3 bg-brand-500 hover:bg-brand-600 text-white font-bold text-sm rounded-xl shadow-glow-emerald btn-spring">
+          ฝากเงินเลยตอนนี้
+        </button>
+        <button onclick="closeAlarmModal()" class="w-full py-2.5 text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          ไว้ทีหลัง
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: NOTIFICATION SETTINGS -->
+  <div id="notifModal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-6 hidden">
+    <div class="w-full max-w-xs bg-white dark:bg-slate-900 rounded-3xl p-5 text-center shadow-2xl">
+      <div class="w-12 h-12 rounded-2xl bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-400 flex items-center justify-center text-xl mx-auto mb-3">
+        <i class="fa-solid fa-bell-ring"></i>
+      </div>
+      <h3 class="font-bold text-slate-900 dark:text-white text-base">ระบบแจ้งเตือน</h3>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">อนุญาตให้แอปส่งการแจ้งเตือนบนอุปกรณ์ของคุณเมื่อถึงเวลาออมเงิน</p>
+      
+      <button onclick="requestNotificationPermission()" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs rounded-xl shadow-glow-emerald btn-spring mb-2">
+        เปิดอนุญาตแจ้งเตือน
+      </button>
+      <button onclick="closeNotifModal()" class="w-full py-2 text-xs text-slate-400">ปิดหน้าต่าง</button>
+    </div>
+  </div>
+
+  <!-- IN-APP TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 dark:bg-slate-800/95 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-xl backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-2">
+    <i id="toastIcon" class="fa-solid fa-circle-check text-brand-400"></i>
+    <span id="toastMsg">ข้อความแจ้งเตือน</span>
+  </div>
+
+  <!-- App Main Logic JavaScript -->
+  <script>
+    // App State
+    let goals = [];
+    let historyLogs = [];
+    let selectedEmoji = '🎯';
+    const emojis = ['🎯', '📱', '✈️', '💻', '🚗', '🏠', '🎓', '🛍️', '🎮', '💎'];
+
+    // Initialize App
+    window.addEventListener('DOMContentLoaded', () => {
+      initTheme();
+      renderEmojiSelector();
+      loadData();
+      renderAll();
+      initAlarmChecker();
+    });
+
+    // Theme Switcher
+    function initTheme() {
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+
+    function toggleDarkMode() {
+      if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        localStorage.theme = 'light';
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.theme = 'dark';
+      }
+    }
+
+    // Emoji Picker Renderer
+    function renderEmojiSelector() {
+      const container = document.getElementById('emojiSelector');
+      container.innerHTML = emojis.map((e, idx) => `
+        <button type="button" onclick="selectEmoji('${e}')" class="emoji-btn w-9 h-9 rounded-xl flex items-center justify-center text-lg transition ${idx === 0 ? 'bg-brand-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}">
+          ${e}
+        </button>
+      `).join('');
+    }
+
+    function selectEmoji(e) {
+      selectedEmoji = e;
+      const btns = document.querySelectorAll('.emoji-btn');
+      btns.forEach(b => {
+        if (b.textContent.trim() === e) {
+          b.className = 'emoji-btn w-9 h-9 rounded-xl flex items-center justify-center text-lg transition bg-brand-500 text-white';
+        } else {
+          b.className = 'emoji-btn w-9 h-9 rounded-xl flex items-center justify-center text-lg transition bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300';
+        }
+      });
+    }
+
+    // Data Management
+    function loadData() {
+      goals = JSON.parse(localStorage.getItem('piggy_goals') || '[]');
+      historyLogs = JSON.parse(localStorage.getItem('piggy_history') || '[]');
+    }
+
+    function saveData() {
+      localStorage.setItem('piggy_goals', JSON.stringify(goals));
+      localStorage.setItem('piggy_history', JSON.stringify(historyLogs));
+      renderAll();
+    }
+
+    // Render Function
+    function renderAll() {
+      renderSummary();
+      renderGoals();
+      renderHistory();
+    }
+
+    function renderSummary() {
+      const totalSaved = goals.reduce((acc, g) => acc + (g.current || 0), 0);
+      const completed = goals.filter(g => g.current >= g.target).length;
+
+      document.getElementById('heroTotalBalance').textContent = '฿' + totalSaved.toLocaleString();
+      document.getElementById('completedBadgeText').textContent = `เป้าหมายสำเร็จ ${completed}/${goals.length}`;
+      document.getElementById('goalsBadgeCount').textContent = goals.length;
+
+      // Streak calculation based on history log dates
+      const streak = calculateStreak();
+      document.getElementById('streakDaysCount').textContent = `${streak} วัน`;
+    }
+
+    function calculateStreak() {
+      if (historyLogs.length === 0) return 0;
+      const dates = [...new Set(historyLogs.map(l => l.dateStr))];
+      return dates.length;
+    }
+
+    function renderGoals() {
+      const container = document.getElementById('goalsCardsList');
+      if (goals.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 px-4 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800">
+            <div class="text-4xl mb-2">🐷</div>
+            <h3 class="font-bold text-slate-700 dark:text-slate-300 text-sm">ยังไม่มีเป้าหมาย</h3>
+            <p class="text-xs text-slate-400 mt-1 mb-4">กดปุ่มด้านล่างเพื่อเริ่มออมเงินเป้าหมายแรกของคุณ</p>
+            <button onclick="openGoalModal()" class="px-4 py-2 bg-brand-500 text-white font-bold text-xs rounded-xl shadow-glow-emerald">
+              + เพิ่มเป้าหมาย
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = goals.map(g => {
+        const percent = Math.min(Math.round((g.current / g.target) * 100), 100);
+        const isDone = g.current >= g.target;
+        const remaining = Math.max(g.target - g.current, 0);
+
+        // Circular progress calculation
+        const radius = 22;
+        const circumference = 2 * Math.PI * radius;
+        const strokeDashoffset = circumference - (percent / 100) * circumference;
+
+        return `
+          <div class="glass-card rounded-3xl p-5 shadow-card-soft relative overflow-hidden transition hover:border-brand-500/40">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-2xl shadow-inner">
+                  ${g.emoji || '🎯'}
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-900 dark:text-white text-base leading-snug">${escapeHTML(g.title)}</h3>
+                  <div class="text-xs text-slate-400 flex items-center gap-1 mt-0.5 font-num">
+                    <i class="fa-regular fa-clock text-brand-500"></i> ${g.time} น.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Circular Progress Ring -->
+              <div class="relative w-14 h-14 flex items-center justify-center">
+                <svg class="w-14 h-14 transform -rotate-90">
+                  <circle cx="28" cy="28" r="${radius}" stroke="currentColor" stroke-width="4" class="text-slate-200 dark:text-slate-800" fill="transparent" />
+                  <circle cx="28" cy="28" r="${radius}" stroke="currentColor" stroke-width="4" class="text-brand-500" fill="transparent"
+                          stroke-dasharray="${circumference}" stroke-dashoffset="${strokeDashoffset}" stroke-linecap="round" />
+                </svg>
+                <span class="absolute font-num font-extrabold text-[11px] text-slate-800 dark:text-slate-100">${percent}%</span>
+              </div>
+            </div>
+
+            <!-- Balance Details -->
+            <div class="mt-4 flex justify-between items-end">
+              <div>
+                <span class="text-[10px] text-slate-400 uppercase font-semibold">สะสมได้</span>
+                <div class="text-lg font-extrabold font-num text-brand-600 dark:text-brand-400">฿${g.current.toLocaleString()}</div>
+              </div>
+              <div class="text-right">
+                <span class="text-[10px] text-slate-400 uppercase font-semibold">เป้าหมาย</span>
+                <div class="text-xs font-bold font-num text-slate-600 dark:text-slate-300">฿${g.target.toLocaleString()}</div>
+              </div>
+            </div>
+
+            <!-- Actions Row -->
+            <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-2">
+              <button onclick="openDepositModal('${g.id}')" class="flex-1 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs rounded-xl shadow-glow-emerald btn-spring flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-plus text-xs"></i> ฝากเงิน
+              </button>
+              <button onclick="editGoal('${g.id}')" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center text-xs btn-spring">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button onclick="deleteGoal('${g.id}')" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-rose-400 hover:text-rose-600 flex items-center justify-center text-xs btn-spring">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderHistory() {
+      const container = document.getElementById('historyLogList');
+      if (historyLogs.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 text-center py-8">ยังไม่มีประวัติการฝากเงิน</p>`;
+        return;
+      }
+
+      container.innerHTML = historyLogs.slice(0, 20).map(l => `
+        <div class="glass-card p-3 rounded-2xl flex items-center justify-between text-xs">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
+              +
+            </div>
+            <div>
+              <div class="font-bold text-slate-800 dark:text-slate-100">${escapeHTML(l.goalTitle)}</div>
+              <div class="text-[10px] text-slate-400 font-num">${l.timestamp}</div>
+            </div>
+          </div>
+          <div class="font-num font-extrabold text-brand-600 dark:text-brand-400 text-sm">+฿${l.amount.toLocaleString()}</div>
+        </div>
+      `).join('');
+    }
+
+    // Tab Navigation
+    function switchTab(tab) {
+      const goalsBtn = document.getElementById('tabBtnGoals');
+      const historyBtn = document.getElementById('tabBtnHistory');
+      const goalsContent = document.getElementById('tabGoalsContent');
+      const historyContent = document.getElementById('tabHistoryContent');
+
+      if (tab === 'goals') {
+        goalsBtn.className = "flex-1 py-2.5 rounded-xl transition-all shadow-sm bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 flex items-center justify-center gap-2 font-bold";
+        historyBtn.className = "flex-1 py-2.5 rounded-xl transition-all text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 font-semibold";
+        goalsContent.classList.remove('hidden');
+        historyContent.classList.add('hidden');
+      } else {
+        historyBtn.className = "flex-1 py-2.5 rounded-xl transition-all shadow-sm bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 flex items-center justify-center gap-2 font-bold";
+        goalsBtn.className = "flex-1 py-2.5 rounded-xl transition-all text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 font-semibold";
+        historyContent.classList.remove('hidden');
+        goalsContent.classList.add('hidden');
+      }
+    }
+
+    // Modal Handlers
+    function openGoalModal(editId = null) {
+      const modal = document.getElementById('goalModal');
+      document.getElementById('formGoalId').value = editId || '';
+      document.getElementById('goalModalTitle').querySelector('span:last-child').textContent = editId ? 'แก้ไขเป้าหมาย' : 'สร้างเป้าหมายใหม่';
+
+      if (editId) {
+        const g = goals.find(x => x.id === editId);
+        if (g) {
+          document.getElementById('formTitle').value = g.title;
+          document.getElementById('formTarget').value = g.target;
+          document.getElementById('formTime').value = g.time;
+          selectEmoji(g.emoji || '🎯');
+        }
+      } else {
+        document.getElementById('goalForm').reset();
+        selectEmoji('🎯');
+      }
+
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modal.firstElementChild.classList.remove('translate-y-full');
+      }, 10);
+    }
+
+    function closeGoalModal() {
+      const modal = document.getElementById('goalModal');
+      modal.classList.add('opacity-0');
+      modal.firstElementChild.classList.add('translate-y-full');
+      setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    function saveGoalHandler(e) {
+      e.preventDefault();
+      const id = document.getElementById('formGoalId').value;
+      const title = document.getElementById('formTitle').value.trim();
+      const target = parseFloat(document.getElementById('formTarget').value);
+      const time = document.getElementById('formTime').value;
+
+      if (id) {
+        const g = goals.find(x => x.id === id);
+        if (g) {
+          g.title = title;
+          g.target = target;
+          g.time = time;
+          g.emoji = selectedEmoji;
+        }
+      } else {
+        goals.push({
+          id: 'g_' + Date.now(),
+          title,
+          target,
+          current: 0,
+          time,
+          emoji: selectedEmoji,
+          lastNotified: ''
+        });
+      }
+
+      saveData();
+      closeGoalModal();
+      showToast(id ? 'แก้ไขเป้าหมายสำเร็จ!' : 'สร้างเป้าหมายสำเร็จ!');
+    }
+
+    function editGoal(id) {
+      openGoalModal(id);
+    }
+
+    function deleteGoal(id) {
+      if (confirm('ยืนยันลบเป้าหมายนี้ใช่หรือไม่?')) {
+        goals = goals.filter(g => g.id !== id);
+        saveData();
+        showToast('ลบเป้าหมายเรียบร้อยแล้ว');
+      }
+    }
+
+    // Deposit Handlers
+    function openDepositModal(id) {
+      const g = goals.find(x => x.id === id);
+      if (!g) return;
+
+      document.getElementById('depositGoalId').value = g.id;
+      document.getElementById('depositModalGoalTitle').textContent = `ออมให้ "${g.title}"`;
+      document.getElementById('depositAmountInput').value = '';
+
+      const modal = document.getElementById('depositModal');
+      modal.classList.remove('hidden');
+      setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    }
+
+    function closeDepositModal() {
+      const modal = document.getElementById('depositModal');
+      modal.classList.add('opacity-0');
+      setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    function setPresetDeposit(val) {
+      document.getElementById('depositAmountInput').value = val;
+    }
+
+    function submitDepositHandler(e) {
+      e.preventDefault();
+      const id = document.getElementById('depositGoalId').value;
+      const amount = parseFloat(document.getElementById('depositAmountInput').value);
+
+      if (isNaN(amount) || amount <= 0) return;
+
+      const g = goals.find(x => x.id === id);
+      if (g) {
+        g.current += amount;
+
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const timestamp = `${now.toLocaleDateString('th-TH')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+        historyLogs.unshift({
+          id: 'log_' + Date.now(),
+          goalTitle: g.title,
+          amount: amount,
+          timestamp: timestamp,
+          dateStr: dateStr
+        });
+
+        saveData();
+        closeDepositModal();
+
+        // Celebration Effect if Goal Completed
+        if (g.current >= g.target) {
+          confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+          showToast(`🎉 ยินดีด้วย! บรรลุเป้าหมาย "${g.title}" แล้ว!`);
+        } else {
+          showToast(`ฝากเงินสำเร็จ ฿${amount.toLocaleString()}!`);
+        }
+      }
+    }
+
+    function clearHistoryLog() {
+      if (confirm('คุณต้องการล้างประวัติการฝากเงินทั้งหมดใช่หรือไม่?')) {
+        historyLogs = [];
+        saveData();
+        showToast('ล้างประวัติการออมเรียบร้อยแล้ว');
+      }
+    }
+
+    // Alarm & Sound Checker
+    function initAlarmChecker() {
+      setInterval(() => {
+        const now = new Date();
+        const curTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        const todayStr = now.toDateString();
+
+        goals.forEach(g => {
+          if (g.time === curTime && g.lastNotified !== todayStr) {
+            triggerAlarm(g);
+            g.lastNotified = todayStr;
+            saveData();
+          }
+        });
+      }, 5000);
+    }
+
+    function triggerAlarm(g) {
+      playBeepSound();
+
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("⏰ ถึงเวลาออมเงิน!", {
+          body: `เป้าหมาย: ${g.title}`,
+          icon: "https://cdn-icons-png.flaticon.com/512/272/272525.png"
+        });
+      }
+
+      document.getElementById('alarmGoalEmoji').textContent = g.emoji || '🎯';
+      document.getElementById('alarmGoalTitle').textContent = g.title;
+
+      const btn = document.getElementById('alarmDepositNowBtn');
+      btn.onclick = () => {
+        closeAlarmModal();
+        openDepositModal(g.id);
+      };
+
+      const modal = document.getElementById('alarmModal');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modal.firstElementChild.classList.remove('scale-90');
+      }, 10);
+    }
+
+    function closeAlarmModal() {
+      const modal = document.getElementById('alarmModal');
+      modal.classList.add('opacity-0');
+      modal.firstElementChild.classList.add('scale-90');
+      setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    function playBeepSound() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(660, ctx.currentTime);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
+
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+      } catch(e) {}
+    }
+
+    // Notification Settings
+    function openNotifModal() {
+      document.getElementById('notifModal').classList.remove('hidden');
+    }
+
+    function closeNotifModal() {
+      document.getElementById('notifModal').classList.add('hidden');
+    }
+
+    function requestNotificationPermission() {
+      if ("Notification" in window) {
+        Notification.requestPermission().then(p => {
+          if (p === 'granted') {
+            showToast('เปิดการแจ้งเตือนเรียบร้อย!');
+            document.getElementById('notifActiveBadge').classList.remove('hidden');
+          } else {
+            showToast('ยังไม่ได้เปิดอนุญาต');
+          }
+          closeNotifModal();
+        });
+      } else {
+        showToast('อุปกรณ์ไม่รองรับการแจ้งเตือน');
+        closeNotifModal();
+      }
+    }
+
+    // Toast Utility
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 3000);
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+      }[tag] || tag));
+    }
+  </script>
+</body>
+</html>
